@@ -1,6 +1,17 @@
 import campusPaths from "../data/campusPaths.json";
 import type { CampusPath } from "../types";
+import { campusBuildings, getCampusBuildingByName } from "../data/campusData";
 import { haversineDistance } from "../utils/helpers";
+import { closestCampusMatch, normalizeCampusText } from "../utils/helpers";
+
+function resolveCampusName(name: string): string {
+  const building = getCampusBuildingByName(name) ?? closestCampusMatch(name, campusBuildings);
+  return building?.name ?? name;
+}
+
+function matchesName(left: string, right: string): boolean {
+  return normalizeCampusText(left) === normalizeCampusText(right);
+}
 
 export async function calculateRoute(
   from: string,
@@ -12,13 +23,13 @@ export async function calculateRoute(
   coordinates: [number, number][];
 } | null> {
   const typedPaths = campusPaths as CampusPath[];
+  const resolvedFrom = resolveCampusName(from);
+  const resolvedTo = resolveCampusName(to);
 
   const path = typedPaths.find(
     (p) =>
-      (p.from.toLowerCase() === from.toLowerCase() &&
-        p.to.toLowerCase() === to.toLowerCase()) ||
-      (p.from.toLowerCase() === to.toLowerCase() &&
-        p.to.toLowerCase() === from.toLowerCase())
+      (matchesName(p.from, resolvedFrom) && matchesName(p.to, resolvedTo)) ||
+      (matchesName(p.from, resolvedTo) && matchesName(p.to, resolvedFrom))
   );
 
   if (path) {
@@ -30,15 +41,19 @@ export async function calculateRoute(
     };
   }
 
-  const fromBuilding = typedPaths.find((p) => p.from.toLowerCase() === from.toLowerCase());
-  const toBuilding = typedPaths.find((p) => p.to.toLowerCase() === to.toLowerCase());
+  const fromBuilding = campusBuildings.find((building) =>
+    matchesName(building.name, resolvedFrom)
+  );
+  const toBuilding = campusBuildings.find((building) =>
+    matchesName(building.name, resolvedTo)
+  );
 
   if (fromBuilding && toBuilding) {
     const distance = haversineDistance(
-      fromBuilding.coordinates[0][0],
-      fromBuilding.coordinates[0][1],
-      toBuilding.coordinates[0][0],
-      toBuilding.coordinates[0][1]
+      fromBuilding.lat,
+      fromBuilding.lng,
+      toBuilding.lat,
+      toBuilding.lng
     );
 
     const minutes = Math.round((distance / 80) * 60);
@@ -47,19 +62,19 @@ export async function calculateRoute(
       distance: `${Math.round(distance)} m`,
       duration: `${minutes} min`,
       instructions: [
-        `Head towards ${to}`,
+        `Head towards ${resolvedTo}`,
         "Continue straight on the main path",
-        `Turn left towards ${to}`,
+        `Turn left towards ${resolvedTo}`,
         "Continue for 100m",
         "Destination reached",
       ],
       coordinates: [
-        fromBuilding.coordinates[0],
+        [fromBuilding.lat, fromBuilding.lng],
         [
-          (fromBuilding.coordinates[0][0] + toBuilding.coordinates[0][0]) / 2,
-          (fromBuilding.coordinates[0][1] + toBuilding.coordinates[0][1]) / 2,
+          (fromBuilding.lat + toBuilding.lat) / 2,
+          (fromBuilding.lng + toBuilding.lng) / 2,
         ],
-        toBuilding.coordinates[0],
+        [toBuilding.lat, toBuilding.lng],
       ],
     };
   }

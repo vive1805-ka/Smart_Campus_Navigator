@@ -1,44 +1,70 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { SavedPlace, SearchResult } from "../types";
+
+const RECENT_SEARCHES_KEY = "campus_recent_searches";
+const SAVED_PLACES_KEY = "campus_saved_places";
 
 interface AppContextType {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
   recentSearches: SearchResult[];
   addRecentSearch: (search: SearchResult) => void;
+  clearRecentSearches: () => void;
   savedPlaces: SavedPlace[];
   addSavedPlace: (place: SavedPlace) => void;
   removeSavedPlace: (id: string) => void;
-  isSplashScreenVisible: boolean;
-  setIsSplashScreenVisible: (visible: boolean) => void;
+  clearSavedPlaces: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+function readStorage<T>(key: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth >= 1024;
+  });
   const [recentSearches, setRecentSearches] = useState<SearchResult[]>(() => {
-    const stored = localStorage.getItem("recentSearches");
-    return stored ? JSON.parse(stored) : [];
+    return readStorage<SearchResult[]>(RECENT_SEARCHES_KEY, []);
   });
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>(() => {
-    const stored = localStorage.getItem("savedPlaces");
-    return stored ? JSON.parse(stored) : [];
+    return readStorage<SavedPlace[]>(SAVED_PLACES_KEY, []);
   });
-  const [isSplashScreenVisible, setIsSplashScreenVisible] = useState(true);
 
   const addRecentSearch = useCallback((search: SearchResult) => {
     setRecentSearches((prev) => {
-      const updated = [search, ...prev.filter((s) => s.id !== search.id)].slice(0, 10);
-      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      const updated = [search, ...prev.filter((item) => item.text !== search.text)].slice(0, 10);
+      writeStorage(RECENT_SEARCHES_KEY, updated);
       return updated;
     });
+  }, []);
+
+  const clearRecentSearches = useCallback(() => {
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch {}
   }, []);
 
   const addSavedPlace = useCallback((place: SavedPlace) => {
     setSavedPlaces((prev) => {
       const updated = [...prev, place];
-      localStorage.setItem("savedPlaces", JSON.stringify(updated));
+      writeStorage(SAVED_PLACES_KEY, updated);
       return updated;
     });
   }, []);
@@ -46,9 +72,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const removeSavedPlace = useCallback((id: string) => {
     setSavedPlaces((prev) => {
       const updated = prev.filter((p) => p.id !== id);
-      localStorage.setItem("savedPlaces", JSON.stringify(updated));
+      writeStorage(SAVED_PLACES_KEY, updated);
       return updated;
     });
+  }, []);
+
+  const clearSavedPlaces = useCallback(() => {
+    setSavedPlaces([]);
+    try {
+      localStorage.removeItem(SAVED_PLACES_KEY);
+    } catch {}
   }, []);
 
   return (
@@ -56,13 +89,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         isSidebarOpen,
         setIsSidebarOpen,
+        toggleSidebar: () => setIsSidebarOpen((prev) => !prev),
         recentSearches,
         addRecentSearch,
+        clearRecentSearches,
         savedPlaces,
         addSavedPlace,
         removeSavedPlace,
-        isSplashScreenVisible,
-        setIsSplashScreenVisible,
+        clearSavedPlaces,
       }}
     >
       {children}

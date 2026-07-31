@@ -34,3 +34,76 @@ export function generateId(): string {
 export function classNames(...args: (string | boolean | undefined | null)[]): string {
   return args.filter(Boolean).join(" ");
 }
+
+export function normalizeCampusText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\b(block|building|campus|department|dept)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function campusMatchScore(query: string, candidate: string, aliases: string[] = []): number {
+  const normalizedQuery = normalizeCampusText(query);
+  const sources = [candidate, ...aliases];
+
+  if (!normalizedQuery) {
+    return 0;
+  }
+
+  let bestScore = 0;
+
+  for (const source of sources) {
+    const normalizedSource = normalizeCampusText(source);
+
+    if (!normalizedSource) {
+      continue;
+    }
+
+    if (normalizedSource === normalizedQuery) {
+      return 100;
+    }
+
+    if (
+      normalizedSource.includes(normalizedQuery) ||
+      normalizedQuery.includes(normalizedSource)
+    ) {
+      bestScore = Math.max(bestScore, 90);
+      continue;
+    }
+
+    const queryParts = normalizedQuery.split(" ");
+    const sourceParts = normalizedSource.split(" ");
+    const overlap = queryParts.filter((part) =>
+      sourceParts.some((candidatePart) =>
+        candidatePart.startsWith(part) || part.startsWith(candidatePart)
+      )
+    ).length;
+
+    if (overlap > 0) {
+      const score = Math.round((overlap / queryParts.length) * 80);
+      bestScore = Math.max(bestScore, score);
+    }
+  }
+
+  return bestScore;
+}
+
+export function closestCampusMatch<T extends { name: string; aliases?: string[] }>(
+  query: string,
+  records: T[]
+): T | null {
+  let bestRecord: T | null = null;
+  let bestScore = 0;
+
+  for (const record of records) {
+    const score = campusMatchScore(query, record.name, record.aliases);
+    if (score > bestScore) {
+      bestScore = score;
+      bestRecord = record;
+    }
+  }
+
+  return bestScore > 0 ? bestRecord : null;
+}

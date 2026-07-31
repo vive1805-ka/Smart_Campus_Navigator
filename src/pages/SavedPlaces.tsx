@@ -1,130 +1,114 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Navigation, Trash2, Plus } from "lucide-react";
-import buildings from "../data/buildings.json";
-import type { SavedPlace } from "../types";
-
-const SAVED_KEY = "campus_saved_places";
-
-const CONTAINER_VARIANTS = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
-};
+import { Bookmark, MapPin, Navigation, Trash2, Sparkles } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
+import { campusBuildings } from "../data/campusData";
 
 export default function SavedPlaces() {
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  const { savedPlaces, removeSavedPlace } = useAppContext();
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SAVED_KEY);
-      if (saved) setSavedPlaces(JSON.parse(saved));
-    } catch {}
-  }, []);
-
-  const handleDelete = (id: string) => {
-    setSavedPlaces((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const handleNavigate = (place: SavedPlace) => {
-    alert(`Navigate to ${place.name}`);
-  };
-
-  const getBuilding = (buildingId: string) => {
-    return buildings.find((b) => b.id === buildingId);
-  };
+  const getBuilding = (buildingId: string) =>
+    campusBuildings.find((building) => building.id === buildingId);
 
   return (
     <motion.div
-      className="p-6 max-w-6xl mx-auto"
+      className="mx-auto max-w-6xl p-4 lg:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.35 }}
     >
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Saved Places</h1>
-        <p className="text-gray-500 mt-1">Your bookmarked locations</p>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+            <Bookmark size={12} />
+            Bookmarks
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
+            Saved Places
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Keep frequently visited landmarks one tap away.
+          </p>
+        </div>
+        <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 lg:flex">
+          <Sparkles size={16} className="text-amber-500" />
+          {savedPlaces.length} saved place{savedPlaces.length === 1 ? "" : "s"}
+        </div>
       </div>
 
       {savedPlaces.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <MapPin size={28} className="text-gray-400" />
+        <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[32px] border border-dashed border-slate-200 bg-white/60 p-8 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-700 dark:bg-slate-900/60">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-200">
+            <Bookmark size={28} />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No saved places</h3>
-          <p className="text-sm text-gray-500 max-w-sm">
-            Save your frequently visited places for quick access and navigation.
+          <h2 className="mt-4 text-xl font-semibold text-slate-900 dark:text-white">
+            No saved places yet
+          </h2>
+          <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
+            Bookmark any campus location from the map popup or details panel and it will appear
+            here for quick access.
           </p>
-          <button className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
-            <Plus size={16} />
-            Add Place
-          </button>
-        </motion.div>
+        </div>
       ) : (
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          variants={CONTAINER_VARIANTS}
-          initial="hidden"
-          animate="show"
-        >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {savedPlaces.map((place) => {
             const building = getBuilding(place.buildingId);
             return (
-              <motion.div
+              <motion.article
                 key={place.id}
-                variants={ITEM_VARIANTS}
-                className="rounded-2xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="overflow-hidden rounded-[28px] border border-white/60 bg-white/75 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-700 dark:bg-slate-900/80"
               >
-                <div className="p-5">
+                <div className="h-40 overflow-hidden bg-slate-950">
+                  <img
+                    src={building?.image}
+                    alt={place.name}
+                    className="h-full w-full object-cover opacity-90"
+                  />
+                </div>
+                <div className="space-y-4 p-5">
                   <div className="flex items-start gap-3">
-                    <span className="text-2xl">{building?.icon || "📍"}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-gray-900 truncate">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-xl dark:bg-blue-950/60">
+                      {building?.icon || "📍"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
                         {place.name}
                       </h3>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Saved on {new Date(place.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-4">
+
+                  <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/80 dark:text-slate-300">
+                    <p className="flex items-center gap-2">
+                      <MapPin size={14} />
+                      {building?.description || "Campus landmark"}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => handleNavigate(place)}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                      type="button"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                     >
-                      <Navigation size={14} />
+                      <Navigation size={16} />
                       Navigate
                     </button>
                     <button
-                      onClick={() => handleDelete(place.id)}
-                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
+                      type="button"
+                      onClick={() => removeSavedPlace(place.id)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/40"
                     >
-                      <Trash2 size={14} />
-                      Delete
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </motion.article>
             );
           })}
-        </motion.div>
+        </div>
       )}
     </motion.div>
   );

@@ -1,5 +1,6 @@
-import buildings from "../data/buildings.json";
+import { campusBuildings, getCampusBuildingByName } from "../data/campusData";
 import type { Building } from "../types";
+import { closestCampusMatch, normalizeCampusText } from "../utils/helpers";
 
 const KNOWLEDGE_BASE: Record<string, { answer: string; location?: string }> = {
   library: {
@@ -67,9 +68,10 @@ const KNOWLEDGE_BASE: Record<string, { answer: string; location?: string }> = {
 
 function findBestMatch(query: string): { answer: string; location?: string } | null {
   const q = query.toLowerCase().trim();
+  const normalizedQuery = normalizeCampusText(query);
 
   for (const [key, value] of Object.entries(KNOWLEDGE_BASE)) {
-    if (q.includes(key)) {
+    if (q.includes(key) || normalizedQuery.includes(normalizeCampusText(key))) {
       return value;
     }
   }
@@ -81,9 +83,10 @@ function findBestMatch(query: string): { answer: string; location?: string } | n
       .replace(/locate/i, "")
       .trim();
 
-    const building = buildings.find((b: Building) =>
-      b.name.toLowerCase().includes(target)
-    );
+    const building =
+      getCampusBuildingByName(target) ??
+      closestCampusMatch(target, campusBuildings) ??
+      campusBuildings.find((b: Building) => normalizeCampusText(b.name).includes(normalizeCampusText(target)));
 
     if (building) {
       return {
@@ -95,9 +98,10 @@ function findBestMatch(query: string): { answer: string; location?: string } | n
 
   if (q.includes("nearest")) {
     const target = q.replace(/nearest/i, "").trim();
-    const building = buildings.find((b: Building) =>
-      b.name.toLowerCase().includes(target)
-    );
+    const building =
+      getCampusBuildingByName(target) ??
+      closestCampusMatch(target, campusBuildings) ??
+      campusBuildings.find((b: Building) => normalizeCampusText(b.name).includes(normalizeCampusText(target)));
 
     if (building) {
       return {
@@ -124,6 +128,6 @@ export async function askCampusAI(query: string): Promise<{
 
   return {
     answer:
-      "I'm not sure about that. Try asking about the Library, Canteen, Bus Stop, Admin Block, Parking, Hostel, Medical Center, Auditorium, Playground, or nearest washroom.",
+    "I'm not sure about that. Try asking about the Library, Canteen, Bus Stop, Admin Block, Parking, Hostel, Medical Center, Auditorium, Playground, or nearest washroom.",
   };
 }

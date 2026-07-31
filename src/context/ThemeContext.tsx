@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from "react";
 import { ThemeMode } from "../types";
 
 interface ThemeContextType {
@@ -17,6 +24,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return "light";
     }
   });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.toggle("dark", theme === "dark");
+    body.classList.toggle("dark", theme === "dark");
+    body.dataset.theme = theme;
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {

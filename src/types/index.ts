@@ -10,6 +10,7 @@ export interface Building {
   floors: number;
   category: string;
   icon: string;
+  aliases?: string[];
 }
 
 export interface Faculty {
