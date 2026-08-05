@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kongu Campus Navigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-rings"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div></div>
+    <div class="splash-mark">KEC</div>
+    <div class="splash-title">KEC NAVIGATOR</div>
+    <div class="splash-sub">Campus Operations Dashboard</div>
+    <div class="splash-bar"><div class="splash-bar-fill" id="splashBarFill"></div></div>
+    <div class="splash-loading" id="splashLoading">Loading buildings, faculty & routes…</div>
+    <div class="splash-skip">Tap anywhere to enter</div>
+  </div>
+</div>
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">KE</div>
+      <div class="brand-text">
+        <div class="t1">Kongu Navigator</div>
+        <div class="t2">CAMPUS OPS DASHBOARD</div>
+      </div>
+    </div>
+    <div id="navlist"></div>
+    <div class="sidebar-foot">Kongu Engineering College<br/>Perundurai · Erode, TN</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Overview</div>
+        <div class="page-sub" id="pageSub">Live snapshot of the campus — buildings, people and transport in one view.</div>
+      </div>
+      <div class="clockbox">
+        <div class="time mono" id="clockTime">--:--:--</div>
+        <div class="date" id="clockDate">--</div>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="grid grid-4" id="statCards"></div>
+      <div style="height:18px"></div>
+      <div class="grid grid-2">
+        <div class="panel">
+          <div class="section-title"><span class="dot"></span>Campus at a glance</div>
+          <div id="overviewMapMini" class="map-wrap" style="height:320px;"></div>
+        </div>
+        <div class="panel">
+          <div class="section-title"><span class="dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>Live alerts</div>
+          <div id="alertsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="tab-panel" id="tab-map">
+      <div class="panel">
+        <div class="map-toolbar" style="position:relative;z-index:5000;">
+          <div class="combo" id="fromCombo">
+            <input id="fromSelect" autocomplete="off" placeholder="From (search a building)" style="min-width:200px;flex:1;width:100%;"/>
+            <div class="combo-list" id="fromComboList"></div>
+          </div>
+          <span style="color:var(--text-dim)">→</span>
+          <div class="combo" id="toCombo">
+            <input id="toSelect" autocomplete="off" placeholder="To (search a building)" style="min-width:200px;flex:1;width:100%;"/>
+            <div class="combo-list" id="toComboList"></div>
+          </div>
+          <button class="btn primary" id="routeBtn">Get Route</button>
+          <button class="btn" id="useLocBtn">📍 Use my location</button>
+        </div>
+        <div class="map-toolbar" id="categoryChips"></div>
+        <div class="map-wrap" id="mapContainer" style="height:520px;"></div>
+        <div id="routeInfo" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <!-- 3D -->
+    <div class="tab-panel" id="tab-3d">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div class="section-title" style="margin:0"><span class="dot" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></span>3D Admin Block</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="chip active" id="view3dCampusChip" data-view="campus">Campus view</div>
+            <div class="chip" id="view3dInteriorChip" data-view="interior">Admin Block interior</div>
+          </div>
+        </div>
+
+        <div id="view3d-campus">
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button class="btn" id="flyAdminBtn">✈ Fly to Admin Block</button>
+            <button class="btn" id="resetViewBtn">⟲ Reset view</button>
+            <button class="btn" id="toggleLabelsBtn">🏷 Toggle all labels</button>
+          </div>
+          <div class="viewer3d" id="viewer3d">
+            <div class="info3d" id="info3d"></div>
+            <div class="viewer-hint">Drag to rotate · Scroll to zoom · Click a building for details</div>
+          </div>
+          <div class="page-sub" style="margin-top:12px;">Model generated from real seeded coordinates (Kongu Engineering College, Perundurai).</div>
+        </div>
+
+        <div id="view3d-interior" style="display:none;">
+          <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="interiorSourceSelect" style="min-width:170px;"></select>
+              <span style="color:var(--text-dim);font-size:13px;">→</span>
+              <select id="interiorDestSelect" style="min-width:170px;"></select>
+              <button class="btn primary" id="interiorRouteBtn">🧭 Show route</button>
+              <button class="btn ghost" id="interiorClearRouteBtn">Clear</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="interiorResetBtn">⟲ Reset view</button>
+              <button class="btn" id="interiorTopBtn">⬇ Top-down view</button>
+            </div>
+          </div>
+          <div class="viewer3d" id="viewer3dInterior">
+            <div class="info3d" id="info3dInterior"></div>
+            <div class="viewer-hint">Drag to rotate · Scroll to zoom · Pinch to zoom · Click a room for details</div>
+          </div>
+          <div class="panel" id="interiorDirections" style="margin-top:12px;display:none;"></div>
+          <div class="page-sub" style="margin-top:12px;">Built directly from your uploaded floor plan — room shapes and positions match the layout you provided.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FACULTY -->
+    <div class="tab-panel" id="tab-faculty">
+      <div class="panel">
+        <div class="map-toolbar">
+          <input id="facSearch" placeholder="Search faculty name or department..." style="min-width:240px;flex:1;"/>
+          <select id="facDept"></select>
+          <button class="chip" id="availOnlyChip">Available now</button>
+        </div>
+        <div id="facultyList" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- BUS -->
+    <div class="tab-panel" id="tab-bus">
+      <div class="panel">
+        <div class="map-toolbar" id="busChips"></div>
+        <div class="grid grid-3" id="busGrid"></div>
+      </div>
+    </div>
+
+    <!-- NEARBY -->
+    <div class="tab-panel" id="tab-nearby">
+      <div class="panel">
+        <div class="map-toolbar">
+          <button class="btn primary" id="nearbyLocBtn">📍 Use my location</button>
+          <span id="nearbyRefText" class="page-sub" style="margin:0;"></span>
+        </div>
+        <div class="map-toolbar" id="nearbyChips"></div>
+        <div id="nearbyList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- EMERGENCY -->
+    <div class="tab-panel" id="tab-emergency">
+      <div class="grid grid-2">
+        <div class="panel">
+          <button class="sos-btn" id="sosBtn"><span class="sos-ring"></span>🆘 SEND SOS</button>
+          <div id="sosResult" style="margin-top:14px;"></div>
+          <div style="margin-top:18px;">
+            <div class="section-title"><span class="dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></span>Emergency contacts</div>
+            <div id="contactsList"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="section-title"><span class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>Nearest medical & security</div>
+          <div id="emergencyNear"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI -->
+    <div class="tab-panel" id="tab-ai">
+      <div class="panel">
+        <div class="section-title"><span class="dot"></span>Ask Campus AI — routes, faculty, buses, anything</div>
+        <div class="chat-window" id="chatWindow"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;" id="suggestions"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="chatInput" placeholder="e.g. Route from main gate to library" style="flex:1;"/>
+          <button class="btn primary" id="chatSend">Send</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/state.js"></script>
+<script src="modules/overview/overview.js"></script>
+<script src="modules/map/map.js"></script>
+<script src="modules/three-campus/three-campus.js"></script>
+<script src="modules/three-interior/three-interior.js"></script>
+<script src="modules/faculty/faculty.js"></script>
+<script src="modules/bus/bus.js"></script>
+<script src="modules/nearby/nearby.js"></script>
+<script src="modules/emergency/emergency.js"></script>
+<script src="modules/ai/ai.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
